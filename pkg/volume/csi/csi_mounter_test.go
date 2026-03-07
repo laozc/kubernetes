@@ -1274,13 +1274,14 @@ func TestUnmounterTeardown(t *testing.T) {
 	}
 
 	// do a fake local mount
-	diskMounter := mount.NewSafeFormatAndMount(plug.host.GetMounter(), &testingexec.FakeExec{DisableScripts: true})
+	diskMounter := mount.NewSafeFormatAndMountWithStorageManager(plug.host.GetMounter(), &testingexec.FakeExec{DisableScripts: true}, &mount.FakeStorageManager{})
 	device := "/fake/device"
+	fsType := "testfs"
 	if goruntime.GOOS == "windows" {
 		// We need disk numbers on Windows.
 		device = "1"
 	}
-	if err := diskMounter.FormatAndMount(device, dir, "testfs", nil); err != nil {
+	if err := diskMounter.FormatAndMount(device, dir, fsType, nil); err != nil {
 		t.Errorf("failed to mount dir [%s]: %v", dir, err)
 	}
 
@@ -1331,7 +1332,7 @@ func TestUnmounterTeardownNoClientError(t *testing.T) {
 	}
 
 	// do a fake local mount
-	diskMounter := mount.NewSafeFormatAndMount(plug.host.GetMounter(), &testingexec.FakeExec{DisableScripts: true})
+	diskMounter := mount.NewSafeFormatAndMountWithStorageManager(plug.host.GetMounter(), &testingexec.FakeExec{DisableScripts: true}, &mount.FakeStorageManager{})
 	device := "/fake/device"
 	if goruntime.GOOS == "windows" {
 		// We need disk numbers on Windows.
