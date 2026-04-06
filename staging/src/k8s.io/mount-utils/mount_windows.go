@@ -26,6 +26,7 @@ import (
 	"strings"
 
 	"k8s.io/klog/v2"
+	utilexec "k8s.io/utils/exec"
 	"k8s.io/utils/keymutex"
 )
 
@@ -309,7 +310,7 @@ func (mounter *SafeFormatAndMount) formatAndMountSensitive(source string, target
 	}
 	klog.V(4).Infof("diskMount: Disk successfully formatted, disk: %q, fstype: %q", source, fstype)
 
-	volumeIds, err := ListVolumesOnDisk(source)
+	volumeIds, err := ListVolumesOnDisk(mounter.Exec, source)
 	if err != nil {
 		return err
 	}
@@ -318,11 +319,13 @@ func (mounter *SafeFormatAndMount) formatAndMountSensitive(source string, target
 }
 
 // ListVolumesOnDisk - returns back list of volumes(volumeIDs) in the disk (requested in diskID).
-func ListVolumesOnDisk(diskID string) (volumeIDs []string, err error) {
+func ListVolumesOnDisk(exec utilexec.Interface, diskID string) (volumeIDs []string, err error) {
 	// If a Disk has multiple volumes, Get-Volume may not return items in the same order.
-	cmd := exec.Command("powershell", "/c", "(Get-Disk -DeviceId $env:diskID | Get-Partition | Get-Volume | Sort-Object -Property UniqueId).UniqueId")
-	cmd.Env = append(os.Environ(), fmt.Sprintf("diskID=%s", diskID))
-	klog.V(8).Infof("Executing command: %q", cmd.String())
+	cmdString := "(Get-Disk -DeviceId $env:diskID | Get-Partition | Get-Volume | Sort-Object -Property UniqueId).UniqueId"
+	cmd := exec.Command("powershell", "/c", cmdString)
+	env := append(os.Environ(), fmt.Sprintf("diskID=%s", diskID))
+	cmd.SetEnv(env)
+	klog.V(8).Infof("Executing command: %q", cmdString)
 	output, err := cmd.CombinedOutput()
 	klog.V(4).Infof("ListVolumesOnDisk id from %s: %s", diskID, string(output))
 	if err != nil {
